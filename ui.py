@@ -162,6 +162,7 @@ class MainWindow(QWidget):
         main_layout.addLayout(button_layout)
         main_layout.addLayout(center_layout)
         main_layout.addLayout(bottom_layout)
+        main_layout.setStretch(1, 1)  # Make center_layout take all available space
         self.setLayout(main_layout)
 
         # Create timer for updating text every second
@@ -173,6 +174,7 @@ class MainWindow(QWidget):
         # Update text with current time
         current_time = QTime.currentTime().toString()
         self.label.setText(f'Time: {current_time}')
+        self.label.adjustSize()
 
     def update_timer_icon(self):
         if self.timer_running:
@@ -210,7 +212,7 @@ class MainWindow(QWidget):
         super().resizeEvent(event)
 
     def toggle_always_on_top(self):
-        if (self.always_on_top):
+        if self.always_on_top:
             self.setWindowFlags(self.windowFlags() & ~Qt.WindowStaysOnTopHint)
             self.config['UI']['pin'] = "False"
             self.always_on_top_button.setIcon(QIcon("icons/unpin.png"))
@@ -242,13 +244,15 @@ class MainWindow(QWidget):
     def mouseReleaseEvent(self, event: QMouseEvent):
         if event.button() == Qt.LeftButton:
             if not self.resizing:
-                # Toggle timer on left button release
-                if self.timer_running:
-                    self.timer.stop()
-                else:
-                    self.timer.start(self.update_interval * 1000)
-                self.timer_running = not self.timer_running
-                self.update_timer_icon()
+                # Check if click is within label bounds
+                if self.label.geometry().contains(event.pos()):
+                    # Toggle timer on left button release
+                    if self.timer_running:
+                        self.timer.stop()
+                    else:
+                        self.timer.start(self.update_interval * 1000)
+                    self.timer_running = not self.timer_running
+                    self.update_timer_icon()
         elif event.button() == Qt.RightButton:
             # Stop timer and update text on right button release
             self.timer.stop()
@@ -271,7 +275,6 @@ class MainWindow(QWidget):
         # Function to update text on right click
         self.label.setText("Right-click content updated")
         self.label.adjustSize()
-
 
 if __name__ == '__main__':
     config = conf.init()
