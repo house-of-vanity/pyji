@@ -1,5 +1,6 @@
 import sys
-from PySide6.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QHBoxLayout, QDialog, QSpinBox, QFormLayout, QDialogButtonBox, QSlider, QColorDialog
+from PySide6.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QHBoxLayout, QDialog, QSpinBox, \
+    QFormLayout, QDialogButtonBox, QSlider, QColorDialog, QProgressBar
 from PySide6.QtCore import QTimer, QTime, Qt, QPoint
 from PySide6.QtGui import QIcon, QMouseEvent, QPixmap, QColor
 
@@ -62,6 +63,7 @@ class SettingsDialog(QDialog):
                 self.bg_color,
                 self.text_color)
 
+
 class MainWindow(QWidget):
     def __init__(self, config):
         super().__init__()
@@ -74,6 +76,7 @@ class MainWindow(QWidget):
         self.oldPos = self.pos()  # For moving the window
         self.resizing = False  # For resizing the window
         self.always_on_top = False  # Track the always on top state
+        self.timer_running = True  # Track timer state
         self.initUI()
 
     def initUI(self):
@@ -89,6 +92,7 @@ class MainWindow(QWidget):
         # Create QLabel for displaying text
         self.label = QLabel('^_,,_^', self)
         self.label.setAlignment(Qt.AlignCenter)
+        self.label.setWordWrap(True)
         self.update_colors()
         self.update_font_size()
 
@@ -117,34 +121,47 @@ class MainWindow(QWidget):
             self.always_on_top = not self.always_on_top
         else:
             self.always_on_top_button.setIcon(QIcon("icons/unpin.png"))
-        self.always_on_top_button.setFixedSize(40, 20)
+        self.always_on_top_button.setFixedSize(20, 20)
         self.always_on_top_button.clicked.connect(self.toggle_always_on_top)
         self.always_on_top_button.setStyleSheet("QPushButton { border: none; }")
         self.always_on_top_button.setCursor(Qt.CursorShape.PointingHandCursor)
 
         # Resize icon
         self.resize_icon = QLabel(self)
-        self.resize_icon.setPixmap(QPixmap("icons/resize.png"))
-        self.resize_icon.setFixedSize(20, 20)
+        self.resize_icon.setPixmap(QPixmap("icons/resize.png").scaled(14, 14, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         self.resize_icon.setCursor(Qt.SizeFDiagCursor)
+
+        # Timer icon
+        self.timer_icon = QLabel(self)
+        self.update_timer_icon()
+        #self.timer_icon.setFixedSize(20, 20)
 
         # Layout for settings, always on top, and close buttons
         button_layout = QHBoxLayout()
-        button_layout.addStretch()
         button_layout.addWidget(self.settings_button)
+        button_layout.addStretch()
         button_layout.addWidget(self.always_on_top_button)
         button_layout.addWidget(self.close_button)
 
         # Center layout for the label
         center_layout = QVBoxLayout()
+        center_layout.addStretch()
         center_layout.addWidget(self.label)
+        center_layout.addStretch()
         center_layout.setAlignment(Qt.AlignCenter)
+
+        # Layout for bottom buttons
+        bottom_layout = QHBoxLayout()
+        bottom_layout.addWidget(self.timer_icon, alignment=Qt.AlignLeft | Qt.AlignBottom)
+        bottom_layout.addStretch()
+        bottom_layout.addWidget(self.resize_icon, alignment=Qt.AlignRight | Qt.AlignBottom)
+
 
         # Main layout
         main_layout = QVBoxLayout()
         main_layout.addLayout(button_layout)
         main_layout.addLayout(center_layout)
-        main_layout.addWidget(self.resize_icon, alignment=Qt.AlignRight | Qt.AlignBottom)
+        main_layout.addLayout(bottom_layout)
         self.setLayout(main_layout)
 
         # Create timer for updating text every second
@@ -156,6 +173,12 @@ class MainWindow(QWidget):
         # Update text with current time
         current_time = QTime.currentTime().toString()
         self.label.setText(f'Time: {current_time}')
+
+    def update_timer_icon(self):
+        if self.timer_running:
+            self.timer_icon.setPixmap(QPixmap("icons/play.png").scaled(14, 14, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        else:
+            self.timer_icon.setPixmap(QPixmap("icons/pause.png").scaled(14, 14, Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
     def open_settings(self):
         dialog = SettingsDialog(self.update_interval, self.window_opacity, self)
@@ -187,7 +210,7 @@ class MainWindow(QWidget):
         super().resizeEvent(event)
 
     def toggle_always_on_top(self):
-        if self.always_on_top:
+        if (self.always_on_top):
             self.setWindowFlags(self.windowFlags() & ~Qt.WindowStaysOnTopHint)
             self.config['UI']['pin'] = "False"
             self.always_on_top_button.setIcon(QIcon("icons/unpin.png"))
@@ -217,10 +240,25 @@ class MainWindow(QWidget):
                 self.oldPos = event.globalPos()
 
     def mouseReleaseEvent(self, event: QMouseEvent):
+        if event.button() == Qt.LeftButton:
+            if not self.resizing:
+                # Toggle timer on left button release
+                if self.timer_running:
+                    self.timer.stop()
+                else:
+                    self.timer.start(self.update_interval * 1000)
+                self.timer_running = not self.timer_running
+                self.update_timer_icon()
+        elif event.button() == Qt.RightButton:
+            # Stop timer and update text on right button release
+            self.timer.stop()
+            self.timer_running = False
+            self.update_timer_icon()
+            self.update_text_right_click()
         self.resizing = False
 
     def is_in_resize_zone(self, pos):
-        return pos.x() > self.width() - 20 and pos.y() > self.height() - 20
+        return pos.x() > self.width() - 30 and pos.y() > self.height() - 30
 
     def resize_window(self, globalPos):
         delta = globalPos - self.oldPos
@@ -228,3 +266,16 @@ class MainWindow(QWidget):
         new_height = max(self.minimumHeight(), self.height() + delta.y())
         self.resize(new_width, new_height)
         self.oldPos = globalPos
+
+    def update_text_right_click(self):
+        # Function to update text on right click
+        self.label.setText("Right-click content updated")
+        self.label.adjustSize()
+
+
+if __name__ == '__main__':
+    config = conf.init()
+    app = QApplication(sys.argv)
+    window = MainWindow(config)
+    window.show()
+    sys.exit(app.exec())
