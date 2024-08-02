@@ -1,7 +1,26 @@
 import sys
-from PySide6.QtWidgets import QTableWidget, QTableWidgetItem, QCheckBox, QHeaderView, QApplication, QLabel, QVBoxLayout, \
-    QWidget, QPushButton, QHBoxLayout, QDialog, QSpinBox, \
-    QFormLayout, QDialogButtonBox, QSlider, QColorDialog, QProgressBar, QInputDialog
+from PySide6.QtWidgets import (
+    QTableWidget,
+    QTableWidgetItem,
+    QCheckBox,
+    QHeaderView,
+    QApplication,
+    QLabel,
+    QVBoxLayout,
+    QWidget,
+    QPushButton,
+    QHBoxLayout,
+    QDialog,
+    QSpinBox,
+    QFormLayout,
+    QDialogButtonBox,
+    QSlider,
+    QColorDialog,
+    QProgressBar,
+    QInputDialog,
+    QFileDialog,
+    QMessageBox,
+)
 from PySide6.QtCore import QTimer, QTime, Qt, QPoint
 from PySide6.QtGui import QIcon, QMouseEvent, QPixmap, QColor
 
@@ -9,7 +28,6 @@ from PySide6.QtGui import QIcon, QMouseEvent, QPixmap, QColor
 import config as conf
 import deck
 
-from PySide6.QtWidgets import QTableWidget, QTableWidgetItem, QCheckBox, QHeaderView, QLineEdit, QFileDialog, QMessageBox
 
 class DeckSelectionDialog(QDialog):
     def __init__(self, parent=None):
@@ -95,11 +113,11 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Settings")
 
-        self.bg_color = parent.bg_color
-        self.text_color = parent.text_color
+        self.main_bg_color = parent.bg_color
+        self.main_text_color = parent.text_color
 
         self.layout = QFormLayout(self)
-        
+
         # Create spinbox for selecting interval
         self.interval_spinbox = QSpinBox(self)
         self.interval_spinbox.setMinimum(1)
@@ -135,7 +153,6 @@ class SettingsDialog(QDialog):
         self.button_box.rejected.connect(self.reject)
         self.layout.addWidget(self.button_box)
 
-
     def open_item_selection(self):
         dialog = DeckSelectionDialog(self)
         if dialog.exec():
@@ -143,30 +160,32 @@ class SettingsDialog(QDialog):
             print("Selected items:", selected_items)  # You can handle selected items as needed
 
     def select_bg_color(self):
-        color = QColorDialog.getColor(self.bg_color, self, "Select Background Color")
+        color = QColorDialog.getColor(self.main_bg_color, self, "Select Background Color")
         if color.isValid():
-            self.bg_color = color
+            self.main_bg_color = color
 
     def select_text_color(self):
-        color = QColorDialog.getColor(self.text_color, self, "Select Text Color")
+        color = QColorDialog.getColor(self.main_text_color, self, "Select Text Color")
         if color.isValid():
-            self.text_color = color
+            self.main_text_color = color
 
     def get_settings(self):
-        return (self.interval_spinbox.value(), 
-                self.opacity_slider.value() / 100.0,
-                self.bg_color,
-                self.text_color)
+        return (
+            self.interval_spinbox.value(),
+            self.opacity_slider.value() / 100.0,
+            self.main_bg_color,
+            self.main_text_color,
+        )
 
 
 class MainWindow(QWidget):
     def __init__(self, config):
         super().__init__()
         self.collection = deck.Collection(directory_path=f"{conf.get_config_path(config=False)}/decks/")
-        self.update_interval = config.getint('UI', 'update_interval', fallback=1)
-        self.window_opacity = config.getfloat('UI', 'window_opacity', fallback=1.0)
-        self.bg_color = QColor(config.get('UI', 'bg_color', fallback="darkCyan"))
-        self.text_color = QColor(config.get('UI', 'text_color', fallback="black"))
+        self.update_interval = config.getint("UI", "update_interval", fallback=1)
+        self.window_opacity = config.getfloat("UI", "window_opacity", fallback=1.0)
+        self.bg_color = QColor(config.get("UI", "bg_color", fallback="darkCyan"))
+        self.text_color = QColor(config.get("UI", "text_color", fallback="black"))
         self.config = config
 
         self.oldPos = self.pos()  # For moving the window
@@ -177,7 +196,7 @@ class MainWindow(QWidget):
 
     def initUI(self):
         self.resize(200, 200)
-        self.setWindowTitle('PyJi')
+        self.setWindowTitle("PyJi")
 
         # Remove window frame
         self.setWindowFlags(Qt.FramelessWindowHint)
@@ -185,11 +204,22 @@ class MainWindow(QWidget):
         # Set window opacity
         self.setWindowOpacity(self.window_opacity)
 
+        # Apply styles specific to MainWindow only
+        self.setStyleSheet(
+            f"""
+            MainWindow {{
+                background-color: {self.bg_color.name()};
+            }}
+            QLabel {{
+                color: {self.text_color.name()};
+            }}
+            """
+        )
+
         # Create QLabel for displaying text
-        self.label = QLabel('^_,,_^', self)
+        self.label = QLabel("^_,,_^", self)
         self.label.setAlignment(Qt.AlignCenter)
         self.label.setWordWrap(True)
-        self.update_colors()
         self.update_font_size()
 
         # Settings button
@@ -211,7 +241,7 @@ class MainWindow(QWidget):
         # Always on top button
         self.always_on_top_button = QPushButton(self)
         # Set pin state
-        if self.config['UI']['pin'] == "True":
+        if self.config["UI"]["pin"] == "True":
             self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
             self.always_on_top_button.setIcon(QIcon("icons/pin.png"))
             self.always_on_top = not self.always_on_top
@@ -224,13 +254,15 @@ class MainWindow(QWidget):
 
         # Resize icon
         self.resize_icon = QLabel(self)
-        self.resize_icon.setPixmap(QPixmap("icons/resize.png").scaled(14, 14, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        self.resize_icon.setPixmap(
+            QPixmap("icons/resize.png").scaled(14, 14, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        )
         self.resize_icon.setCursor(Qt.SizeFDiagCursor)
 
         # Timer icon
         self.timer_icon = QLabel(self)
         self.update_timer_icon()
-        #self.timer_icon.setFixedSize(20, 20)
+        # self.timer_icon.setFixedSize(20, 20)
 
         # Layout for settings, always on top, and close buttons
         button_layout = QHBoxLayout()
@@ -252,7 +284,6 @@ class MainWindow(QWidget):
         bottom_layout.addStretch()
         bottom_layout.addWidget(self.resize_icon, alignment=Qt.AlignRight | Qt.AlignBottom)
 
-
         # Main layout
         main_layout = QVBoxLayout()
         main_layout.addLayout(button_layout)
@@ -268,15 +299,20 @@ class MainWindow(QWidget):
 
     def update_text(self):
         # Update text with current time
-        card = self.collection.get_random_card('33-48')
+        # card = self.collection.get_random_card('33-48')
+        card = "123123"
         self.label.setText(card[0])
         self.label.adjustSize()
 
     def update_timer_icon(self):
         if self.timer_running:
-            self.timer_icon.setPixmap(QPixmap("icons/play.png").scaled(14, 14, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            self.timer_icon.setPixmap(
+                QPixmap("icons/play.png").scaled(14, 14, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            )
         else:
-            self.timer_icon.setPixmap(QPixmap("icons/pause.png").scaled(14, 14, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            self.timer_icon.setPixmap(
+                QPixmap("icons/pause.png").scaled(14, 14, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            )
 
     def open_settings(self):
         dialog = SettingsDialog(self.update_interval, self.window_opacity, self)
@@ -284,16 +320,22 @@ class MainWindow(QWidget):
             self.update_interval, self.window_opacity, self.bg_color, self.text_color = dialog.get_settings()
             self.timer.setInterval(self.update_interval * 1000)  # Update timer interval
             self.setWindowOpacity(self.window_opacity)  # Update window opacity
-            self.update_colors()
-            self.config['UI']['update_interval'] = str(self.update_interval)
-            self.config['UI']['window_opacity'] = str(self.window_opacity)
-            self.config['UI']['bg_color'] = self.bg_color.name()
-            self.config['UI']['text_color'] = self.text_color.name()
+            # Apply styles specific to MainWindow only
+            self.setStyleSheet(
+                f"""
+                MainWindow {{
+                    background-color: {self.bg_color.name()};
+                }}
+                QLabel {{
+                    color: {self.text_color.name()};
+                }}
+                """
+            )
+            self.config["UI"]["update_interval"] = str(self.update_interval)
+            self.config["UI"]["window_opacity"] = str(self.window_opacity)
+            self.config["UI"]["bg_color"] = self.bg_color.name()
+            self.config["UI"]["text_color"] = self.text_color.name()
             conf.write_config(self.config)
-
-    def update_colors(self):
-        self.setStyleSheet(f"background-color: {self.bg_color.name()};")
-        self.label.setStyleSheet(f"color: {self.text_color.name()};")
 
     def update_font_size(self):
         # Calculate font size based on window size
@@ -310,12 +352,12 @@ class MainWindow(QWidget):
     def toggle_always_on_top(self):
         if self.always_on_top:
             self.setWindowFlags(self.windowFlags() & ~Qt.WindowStaysOnTopHint)
-            self.config['UI']['pin'] = "False"
+            self.config["UI"]["pin"] = "False"
             self.always_on_top_button.setIcon(QIcon("icons/unpin.png"))
         else:
             self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
             self.always_on_top_button.setIcon(QIcon("icons/pin.png"))
-            self.config['UI']['pin'] = "True"
+            self.config["UI"]["pin"] = "True"
         self.always_on_top = not self.always_on_top
         conf.write_config(self.config)
         self.show()
@@ -371,4 +413,3 @@ class MainWindow(QWidget):
         # Function to update text on right click
         self.label.setText("Right-click content updated")
         self.label.adjustSize()
-
