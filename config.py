@@ -2,7 +2,7 @@ import os
 import configparser
 import platform
 
-def get_config_path():
+def get_config_path(config=True):
     app_name = 'PyJi'
     config_filename = 'config.ini'
 
@@ -14,7 +14,10 @@ def get_config_path():
     if not os.path.exists(config_dir):
         os.makedirs(config_dir)
 
-    return os.path.join(config_dir, config_filename)
+    if not f"{os.path.exists(config_dir)}/decks":
+        os.makedirs(config_dir)
+
+    return os.path.join(config_dir, config_filename) if config else config_dir
 
 def read_config(config_path):
     config = configparser.ConfigParser()

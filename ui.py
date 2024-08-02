@@ -1,11 +1,94 @@
 import sys
-from PySide6.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QHBoxLayout, QDialog, QSpinBox, \
-    QFormLayout, QDialogButtonBox, QSlider, QColorDialog, QProgressBar
+from PySide6.QtWidgets import QTableWidget, QTableWidgetItem, QCheckBox, QHeaderView, QApplication, QLabel, QVBoxLayout, \
+    QWidget, QPushButton, QHBoxLayout, QDialog, QSpinBox, \
+    QFormLayout, QDialogButtonBox, QSlider, QColorDialog, QProgressBar, QInputDialog
 from PySide6.QtCore import QTimer, QTime, Qt, QPoint
 from PySide6.QtGui import QIcon, QMouseEvent, QPixmap, QColor
 
 # Locals
 import config as conf
+import deck
+
+from PySide6.QtWidgets import QTableWidget, QTableWidgetItem, QCheckBox, QHeaderView, QLineEdit, QFileDialog, QMessageBox
+
+class DeckSelectionDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Select Items")
+        self.setFixedSize(400, 500)  # Set fixed size for the dialog
+
+        self.layout = QVBoxLayout(self)
+
+        # Create the table widget
+        self.table = QTableWidget(self)
+        self.table.setColumnCount(2)  # Two columns: one for checkbox and one for item name
+        self.table.setHorizontalHeaderLabels(["Select", "Item"])
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+        # Add example items to the table
+        self.populate_table(["Item 1", "Item 2", "Item 3", "Item 4"])
+
+        self.layout.addWidget(self.table)
+
+        # Button to add file from the file system
+        self.add_file_button = QPushButton("Add File", self)
+        self.add_file_button.clicked.connect(self.add_file)
+
+        # Button to add URL
+        self.add_url_button = QPushButton("Add URL", self)
+        self.add_url_button.clicked.connect(self.add_url)
+
+        # Layout for add buttons
+        add_button_layout = QHBoxLayout()
+        add_button_layout.addWidget(self.add_file_button)
+        add_button_layout.addWidget(self.add_url_button)
+
+        self.layout.addLayout(add_button_layout)
+
+        # OK and Cancel buttons
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        self.layout.addWidget(self.button_box)
+
+    def populate_table(self, items):
+        self.table.setRowCount(len(items))
+        for row, item in enumerate(items):
+            checkbox = QCheckBox()
+            self.table.setCellWidget(row, 0, checkbox)
+            self.table.setItem(row, 1, QTableWidgetItem(item))
+
+    def get_selected_items(self):
+        selected_items = []
+        for row in range(self.table.rowCount()):
+            checkbox = self.table.cellWidget(row, 0)
+            if checkbox.isChecked():
+                item_name = self.table.item(row, 1).text()
+                selected_items.append(item_name)
+        return selected_items
+
+    def add_file(self):
+        file_dialog = QFileDialog(self)
+        file_path, _ = file_dialog.getOpenFileName(self, "Select File")
+        if file_path:
+            self.add_item(file_path)
+
+    def add_url(self):
+        url, ok = QInputDialog.getText(self, "Add URL", "Enter URL:")
+        if ok and url:
+            self.add_item(url)
+
+    def add_item(self, item):
+        row_count = self.table.rowCount()
+        self.table.insertRow(row_count)
+
+        checkbox = QCheckBox()
+        self.table.setCellWidget(row_count, 0, checkbox)
+        self.table.setItem(row_count, 1, QTableWidgetItem(item))
+
+    def show_error_message(self, message):
+        QMessageBox.critical(self, "Error", message)
+
 
 class SettingsDialog(QDialog):
     def __init__(self, current_interval, current_opacity, parent=None):
@@ -41,12 +124,24 @@ class SettingsDialog(QDialog):
         self.text_color_button.clicked.connect(self.select_text_color)
         self.layout.addRow(self.text_color_button)
 
+        # Select decks button
+        self.item_selection_button = QPushButton("Deck manager", self)
+        self.item_selection_button.clicked.connect(self.open_item_selection)
+        self.layout.addRow(self.item_selection_button)
+
         # OK and Cancel buttons
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
         self.layout.addWidget(self.button_box)
-    
+
+
+    def open_item_selection(self):
+        dialog = DeckSelectionDialog(self)
+        if dialog.exec():
+            selected_items = dialog.get_selected_items()
+            print("Selected items:", selected_items)  # You can handle selected items as needed
+
     def select_bg_color(self):
         color = QColorDialog.getColor(self.bg_color, self, "Select Background Color")
         if color.isValid():
@@ -67,6 +162,7 @@ class SettingsDialog(QDialog):
 class MainWindow(QWidget):
     def __init__(self, config):
         super().__init__()
+        self.collection = deck.Collection(directory_path=f"{conf.get_config_path(config=False)}/decks/")
         self.update_interval = config.getint('UI', 'update_interval', fallback=1)
         self.window_opacity = config.getfloat('UI', 'window_opacity', fallback=1.0)
         self.bg_color = QColor(config.get('UI', 'bg_color', fallback="darkCyan"))
@@ -172,8 +268,8 @@ class MainWindow(QWidget):
 
     def update_text(self):
         # Update text with current time
-        current_time = QTime.currentTime().toString()
-        self.label.setText(f'Time: {current_time}')
+        card = self.collection.get_random_card('33-48')
+        self.label.setText(card[0])
         self.label.adjustSize()
 
     def update_timer_icon(self):
@@ -276,9 +372,3 @@ class MainWindow(QWidget):
         self.label.setText("Right-click content updated")
         self.label.adjustSize()
 
-if __name__ == '__main__':
-    config = conf.init()
-    app = QApplication(sys.argv)
-    window = MainWindow(config)
-    window.show()
-    sys.exit(app.exec())
