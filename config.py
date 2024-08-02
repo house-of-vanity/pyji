@@ -14,8 +14,8 @@ def get_config_path(config=True):
     if not os.path.exists(config_dir):
         os.makedirs(config_dir)
 
-    if not f"{os.path.exists(config_dir)}/decks":
-        os.makedirs(config_dir)
+    if not os.path.exists(os.path.join(config_dir, 'decks')):
+        os.makedirs(os.path.join(config_dir, 'decks'))
 
     return os.path.join(config_dir, config_filename) if config else config_dir
 
@@ -38,19 +38,3 @@ def init():
     config_path = get_config_path()
     config = read_config(config_path)
     return config
-
-# def main():
-#     config_path = get_config_path()
-#     config = read_config(config_path)
-
-#     # Чтение значения
-#     print(f"Current value: {config['DEFAULT']['key']}")
-
-#     # Запись нового значения
-#     config['DEFAULT']['key'] = 'new_value'
-#     write_config(config_path, config)
-
-#     print(f"New value: {config['DEFAULT']['key']}")
-
-# if __name__ == '__main__':
-#     main()
