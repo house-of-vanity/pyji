@@ -210,7 +210,7 @@ class MainWindow(QWidget):
             MainWindow {{
                 background-color: {self.bg_color.name()};
             }}
-            QLabel {{
+            QLabel#MainText {{
                 color: {self.text_color.name()};
             }}
             """
@@ -322,16 +322,6 @@ class MainWindow(QWidget):
             self.timer.setInterval(self.update_interval * 1000)  # Update timer interval
             self.setWindowOpacity(self.window_opacity)  # Update window opacity
             # Apply styles specific to MainWindow only
-            self.setStyleSheet(
-                f"""
-                MainWindow {{
-                    background-color: {self.bg_color.name()};
-                }}
-                QLabel#MainText {{
-                    color: {self.text_color.name()};
-                }}
-                """
-            )
             self.config["UI"]["update_interval"] = str(self.update_interval)
             self.config["UI"]["window_opacity"] = str(self.window_opacity)
             self.config["UI"]["bg_color"] = self.bg_color.name()
