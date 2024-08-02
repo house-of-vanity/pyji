@@ -220,6 +220,7 @@ class MainWindow(QWidget):
         self.label = QLabel("^_,,_^", self)
         self.label.setAlignment(Qt.AlignCenter)
         self.label.setWordWrap(True)
+        self.label.setObjectName("MainText")
         self.update_font_size()
 
         # Settings button
@@ -326,7 +327,7 @@ class MainWindow(QWidget):
                 MainWindow {{
                     background-color: {self.bg_color.name()};
                 }}
-                QLabel {{
+                QLabel#MainText {{
                     color: {self.text_color.name()};
                 }}
                 """
