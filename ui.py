@@ -325,9 +325,9 @@ class MainWindow(QWidget):
             deck_name = random.choice(self.selected_decks)
             try:
                 card = self.collection.get_random_card(deck_name)
-                self.current_card = card  # Сохраняем текущую карточку
-                self.label.setText(card[0])  # Отображаем первую сторону карточки (вопрос)
-                self.update_font_size(is_question=True)  # Устанавливаем большой шрифт для вопроса
+                self.current_card = card  # Save current card
+                self.label.setText(card[0])  # Show question
+                self.update_font_size(is_question=True)  # Set huge font for question
                 self.label.adjustSize()
             except ValueError as e:
                 self.label.setText(str(e))
@@ -358,22 +358,20 @@ class MainWindow(QWidget):
             conf.write_config(self.config)
 
     def update_font_size(self, is_question=True):
-        # Рассчитываем базовый размер шрифта в зависимости от размера окна
         base_font_size = min(self.width(), self.height()) // 5
         font = self.label.font()
         if is_question:
-            font.setPointSize(base_font_size)  # Большой шрифт для вопроса
+            font.setPointSize(base_font_size)  # Set huge font for question
         else:
-            font.setPointSize(base_font_size * 0.5)  # Меньший шрифт для ответа (70% от базового)
+            font.setPointSize(base_font_size * 0.5)  # Set smaller font for answer
         self.label.setFont(font)
 
     def resizeEvent(self, event):
-        # Проверяем, какая сторона карточки отображается
         if self.current_card and self.label.text() == self.current_card[0]:
-            # Если отображается вопрос
+            # If question
             self.update_font_size(is_question=True)
         else:
-            # Если отображается ответ или другой текст
+            # If answer
             self.update_font_size(is_question=False)
         super().resizeEvent(event)
 
@@ -422,24 +420,24 @@ class MainWindow(QWidget):
                         self.update_timer_icon()
         elif event.button() == Qt.RightButton:
             if self.current_card:
-                # Останавливаем таймер, если он запущен
+                # Stop timer if running
                 if self.timer_running:
                     self.timer.stop()
                     self.timer_running = False
                     self.update_timer_icon()
                 current_text = self.label.text()
-                # Проверяем, отображается ли первая сторона
+                # If questions
                 if current_text == self.current_card[0]:
-                    # Объединяем обратную сторону и комментарий
+                    # Join answer and comment
                     combined_text = self.current_card[1]
                     if len(self.current_card) > 2:
-                        combined_text += '\n\n' + self.current_card[2]
+                        combined_text += '\n' + self.current_card[2]
                     self.label.setText(combined_text)
-                    self.update_font_size(is_question=False)  # Устанавливаем меньший шрифт для ответа
+                    self.update_font_size(is_question=False)
                 else:
                     # Возвращаемся к первой стороне
                     self.label.setText(self.current_card[0])
-                    self.update_font_size(is_question=True)  # Устанавливаем большой шрифт для вопроса
+                    self.update_font_size(is_question=True)
                 self.label.adjustSize()
 
         self.resizing = False
