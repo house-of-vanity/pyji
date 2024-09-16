@@ -94,14 +94,14 @@ jobs:
         name: Download ${{ matrix.platform_name }} artifact
         with:
           name: ${{ env.BINARY_NAME }}_${{ matrix.platform_name }}
-          path: ${{ env.BINARY_NAME }}_${{ matrix.platform_name }}
-          
+          path: .
+
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.release.outputs.upload_url }}
-          asset_path: ${{ env.BINARY_NAME }}_${{ matrix.platform_name }}/${{ env.BINARY_NAME }}${{ matrix.platform_name == 'windows-amd64' && '.exe' || '' }}
+          asset_path: ${{ env.BINARY_NAME }}_${{ matrix.platform_name }}/dist/${{ env.BINARY_NAME }}${{ matrix.platform_name == 'windows-amd64' && '.exe' || '' }}
           asset_name: ${{ env.BINARY_NAME }}_${{ matrix.platform_name }}${{ matrix.platform_name == 'windows-amd64' && '.exe' || '' }}
           asset_content_type: application/octet-stream
