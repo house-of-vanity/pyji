@@ -42,14 +42,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}_linux-amd64
-          path: dist/${{ env.BINARY_NAME }}
+          path: dist/main
 
       - name: Upload artifact (Windows)
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}_windows-amd64
-          path: dist/${{ env.BINARY_NAME }}.exe
+          path: dist/main.exe
 
   release:
     name: Create Release Page
