@@ -89,7 +89,7 @@ jobs:
             platform_name: windows-amd64
     steps:
       - name: Test
-        run: pwd ; ls -l ; ls -l ${{ env.BINARY_NAME }}
+        run: pwd ; ls -l
       
       - uses: actions/download-artifact@v4
         name: Download ${{ matrix.platform_name }} artifact
