@@ -1,10 +1,10 @@
-name: Build and Release Python Binary
+name: Build and Release PyJi Binary
 
 on:
   - push
 
 env:
-  BINARY_NAME: main  # Название бинарного файла
+  BINARY_NAME: pyji
 
 jobs:
   build:
@@ -26,7 +26,7 @@ jobs:
       - name: Set up Python ${{ matrix.os }}
         uses: actions/setup-python@v2
         with:
-          python-version: '3.9'  # Версия Python, которую вы используете
+          python-version: '3.12'
 
       - name: Install dependencies
         run: |
@@ -35,21 +35,21 @@ jobs:
 
       - name: Build binary with PyInstaller
         run: |
-          pyinstaller --noconsole --onefile main.py
+          pyinstaller --noconsole --onefile ${{ env.BINARY_NAME }}.py
 
       - name: Upload artifact (Linux)
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}_linux-amd64
-          path: dist/main
+          path: dist/${{ env.BINARY_NAME }}
 
       - name: Upload artifact (Windows)
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}_windows-amd64
-          path: dist/main.exe
+          path: dist/${{ env.BINARY_NAME }}.exe
 
   release:
     name: Create Release Page
@@ -61,7 +61,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-
+  
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
