@@ -35,7 +35,7 @@ jobs:
 
       - name: Build binary with PyInstaller
         run: |
-          pyinstaller --noconsole --onefile ${{ env.BINARY_NAME }}.py
+          pyinstaller --noconsole --onefile main.py
 
       - name: Upload artifact (Linux)
         if: matrix.os == 'ubuntu-latest'
