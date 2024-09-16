@@ -37,8 +37,8 @@ jobs:
 
       - name: Build binary with PyInstaller
         run: |
-          ls -la
-          ls -la icons/
+          ls
+          ls icons/
           pyinstaller --noconsole --add-data "icons:icons" --onefile main.py
 
       - name: Upload artifact (Linux)
