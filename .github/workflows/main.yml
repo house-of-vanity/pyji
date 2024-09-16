@@ -88,7 +88,7 @@ jobs:
           - os: windows-latest
             platform_name: windows-amd64
     steps:
-      - name: Test
+      - name: Test1
         run: pwd ; ls -l
       
       - uses: actions/download-artifact@v4
@@ -97,8 +97,8 @@ jobs:
           name: ${{ env.BINARY_NAME }}_${{ matrix.platform_name }}
           path: binary/
 
-      - name: Test
-        run: pwd ; ls -l ; ls -l ${{ env.BINARY_NAME }}
+      - name: Test2
+        run: pwd ; ls -l ; ls -l binary/
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
