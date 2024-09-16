@@ -88,21 +88,18 @@ jobs:
           - os: windows-latest
             platform_name: windows-amd64
     steps:
-      - name: Test1
-        run: pwd ; ls -l
-      
-      - uses: actions/download-artifact@v4
-        name: Download ${{ matrix.platform_name }} artifact
+      - name: Download ${{ matrix.platform_name }} artifact
+        uses: actions/download-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}_${{ matrix.platform_name }}
           path: binary/
 
-      - name: Test2
-        run: pwd ; ls -l ; ls -l binary/
+      - name: Rename binaries
+        run: mv binary/main${{ matrix.platform_name == 'windows-amd64' && '.exe' || '' }} binary/${{ env.BINARY_NAME }}_${{ matrix.platform_name }}${{ matrix.platform_name == 'windows-amd64' && '.exe' || '' }}
 
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.BINARY_NAME }}_${{ matrix.platform_name }}/dist/${{ env.BINARY_NAME }}${{ matrix.platform_name == 'windows-amd64' && '.exe' || '' }}
+          files: binary/${{ env.BINARY_NAME }}_${{ matrix.platform_name }}${{ matrix.platform_name == 'windows-amd64' && '.exe' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
