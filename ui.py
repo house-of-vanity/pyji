@@ -1,4 +1,5 @@
 import random
+import os
 import sys
 from PySide6.QtWidgets import (
     QTableWidget,
@@ -28,6 +29,12 @@ from PySide6.QtGui import QIcon, QMouseEvent, QPixmap, QColor, QFontMetrics
 # Locals
 import config as conf
 import deck
+
+
+def resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
 
 
 class DeckSelectionDialog(QDialog):
@@ -247,7 +254,7 @@ class MainWindow(QWidget):
 
         # Settings button
         self.settings_button = QPushButton(self)
-        self.settings_button.setIcon(QIcon("icons/settings.png"))
+        self.settings_button.setIcon(QIcon(resource_path("icons/settings.png")))
         self.settings_button.setFixedSize(16, 16)
         self.settings_button.clicked.connect(self.open_settings)
         self.settings_button.setStyleSheet("QPushButton { border: none; }")
@@ -255,7 +262,7 @@ class MainWindow(QWidget):
 
         # Close button
         self.close_button = QPushButton(self)
-        self.close_button.setIcon(QIcon("icons/close.png"))
+        self.close_button.setIcon(QIcon(resource_path("icons/close.png")))
         self.close_button.setFixedSize(12, 12)
         self.close_button.clicked.connect(self.close)
         self.close_button.setStyleSheet("QPushButton { border: none; }")
@@ -266,10 +273,10 @@ class MainWindow(QWidget):
         # Set pin state
         if self.config.getboolean("UI", "pin", fallback=False):
             self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
-            self.always_on_top_button.setIcon(QIcon("icons/pin.png"))
+            self.always_on_top_button.setIcon(QIcon(resource_path("icons/pin.png")))
             self.always_on_top = not self.always_on_top
         else:
-            self.always_on_top_button.setIcon(QIcon("icons/unpin.png"))
+            self.always_on_top_button.setIcon(QIcon(resource_path("icons/unpin.png")))
         self.always_on_top_button.setFixedSize(20, 20)
         self.always_on_top_button.clicked.connect(self.toggle_always_on_top)
         self.always_on_top_button.setStyleSheet("QPushButton { border: none; }")
@@ -278,7 +285,7 @@ class MainWindow(QWidget):
         # Resize icon
         self.resize_icon = QLabel(self)
         self.resize_icon.setPixmap(
-            QPixmap("icons/resize.png").scaled(14, 14, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            QPixmap(resource_path("icons/resize.png")).scaled(14, 14, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         )
         self.resize_icon.setCursor(Qt.SizeFDiagCursor)
 
@@ -337,11 +344,11 @@ class MainWindow(QWidget):
     def update_timer_icon(self):
         if self.timer_running:
             self.timer_icon.setPixmap(
-                QPixmap("icons/play.png").scaled(14, 14, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                QPixmap(resource_path("icons/play.png")).scaled(14, 14, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             )
         else:
             self.timer_icon.setPixmap(
-                QPixmap("icons/pause.png").scaled(14, 14, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                QPixmap(resource_path("icons/pause.png")).scaled(14, 14, Qt.KeepAspectRatio, Qt.SmoothTransformation)
             )
 
     def open_settings(self):
@@ -379,10 +386,10 @@ class MainWindow(QWidget):
         if self.always_on_top:
             self.setWindowFlags(self.windowFlags() & ~Qt.WindowStaysOnTopHint)
             self.config["UI"]["pin"] = "False"
-            self.always_on_top_button.setIcon(QIcon("icons/unpin.png"))
+            self.always_on_top_button.setIcon(QIcon(resource_path("icons/unpin.png")))
         else:
             self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
-            self.always_on_top_button.setIcon(QIcon("icons/pin.png"))
+            self.always_on_top_button.setIcon(QIcon(resource_path("icons/pin.png")))
             self.config["UI"]["pin"] = "True"
         self.always_on_top = not self.always_on_top
         conf.write_config(self.config)
