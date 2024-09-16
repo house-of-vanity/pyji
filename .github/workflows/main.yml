@@ -1,7 +1,9 @@
 name: Build and Release PyJi Binary
 
 on:
-  - push
+  push:
+    tags:
+      - 'v*.*'
 
 env:
   BINARY_NAME: pyji
