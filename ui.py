@@ -1,3 +1,4 @@
+import random
 import sys
 from PySide6.QtWidgets import (
     QTableWidget,
@@ -30,9 +31,10 @@ import deck
 
 
 class DeckSelectionDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, collection, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Select Items")
+        self.collection = collection
         self.setFixedSize(400, 500)  # Set fixed size for the dialog
 
         self.layout = QVBoxLayout(self)
@@ -40,11 +42,14 @@ class DeckSelectionDialog(QDialog):
         # Create the table widget
         self.table = QTableWidget(self)
         self.table.setColumnCount(2)  # Two columns: one for checkbox and one for item name
-        self.table.setHorizontalHeaderLabels(["Select", "Item"])
+        self.table.setHorizontalHeaderLabels(["Select", "Deck Name"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
         # Add example items to the table
-        self.populate_table(["Item 1", "Item 2", "Item 3", "Item 4"])
+        config = conf.read_config(conf.get_config_path())
+        selected_decks = config.get('UI', 'selected_decks', fallback='').split(',')
+
+        self.populate_table(selected_decks)
 
         self.layout.addWidget(self.table)
 
@@ -69,12 +74,16 @@ class DeckSelectionDialog(QDialog):
         self.button_box.rejected.connect(self.reject)
         self.layout.addWidget(self.button_box)
 
-    def populate_table(self, items):
-        self.table.setRowCount(len(items))
-        for row, item in enumerate(items):
+    def populate_table(self, selected_decks):
+        deck_names = self.collection.get_decks()
+        self.table.setRowCount(len(deck_names))
+        for row, deck_name in enumerate(deck_names):
             checkbox = QCheckBox()
+            if deck_name in selected_decks:
+                checkbox.setChecked(True)
             self.table.setCellWidget(row, 0, checkbox)
-            self.table.setItem(row, 1, QTableWidgetItem(item))
+            self.table.setItem(row, 1, QTableWidgetItem(deck_name))
+
 
     def get_selected_items(self):
         selected_items = []
@@ -109,8 +118,9 @@ class DeckSelectionDialog(QDialog):
 
 
 class SettingsDialog(QDialog):
-    def __init__(self, current_interval, current_opacity, parent=None):
+    def __init__(self, current_interval, current_opacity, collection, parent=None):
         super().__init__(parent)
+        self.collection = collection
         self.setWindowTitle("Settings")
 
         self.main_bg_color = parent.bg_color
@@ -154,10 +164,16 @@ class SettingsDialog(QDialog):
         self.layout.addWidget(self.button_box)
 
     def open_item_selection(self):
-        dialog = DeckSelectionDialog(self)
+        dialog = DeckSelectionDialog(self.collection, self)
         if dialog.exec():
             selected_items = dialog.get_selected_items()
-            print("Selected items:", selected_items)  # You can handle selected items as needed
+            print("Selected items:", selected_items)
+            self.save_selected_decks(selected_items)
+
+    def save_selected_decks(self, selected_decks):
+        self.parent().selected_decks = selected_decks
+        self.parent().config['UI']['selected_decks'] = ','.join(selected_decks)
+        conf.write_config(self.parent().config)
 
     def select_bg_color(self):
         color = QColorDialog.getColor(self.main_bg_color, self, "Select Background Color")
@@ -182,11 +198,17 @@ class MainWindow(QWidget):
     def __init__(self, config):
         super().__init__()
         self.collection = deck.Collection(directory_path=f"{conf.get_config_path(config=False)}/decks/")
+        self.current_card = None
+        self.config = config
         self.update_interval = config.getint("UI", "update_interval", fallback=1)
         self.window_opacity = config.getfloat("UI", "window_opacity", fallback=1.0)
         self.bg_color = QColor(config.get("UI", "bg_color", fallback="darkCyan"))
         self.text_color = QColor(config.get("UI", "text_color", fallback="black"))
-        self.config = config
+        selected_decks = self.config.get('UI', 'selected_decks', fallback='')
+        if selected_decks:
+            self.selected_decks = selected_decks.split(',')
+        else:
+            self.selected_decks = self.collection.get_decks()
 
         self.oldPos = self.pos()  # For moving the window
         self.resizing = False  # For resizing the window
@@ -242,7 +264,7 @@ class MainWindow(QWidget):
         # Always on top button
         self.always_on_top_button = QPushButton(self)
         # Set pin state
-        if self.config["UI"]["pin"] == "True":
+        if self.config.getboolean("UI", "pin", fallback=False):
             self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
             self.always_on_top_button.setIcon(QIcon("icons/pin.png"))
             self.always_on_top = not self.always_on_top
@@ -299,11 +321,17 @@ class MainWindow(QWidget):
         self.timer.start(self.update_interval * 1000)  # Interval in milliseconds
 
     def update_text(self):
-        # Update text with current time
-        # card = self.collection.get_random_card('33-48')
-        card = "123123"
-        self.label.setText(card[0])
-        self.label.adjustSize()
+        if self.selected_decks:
+            deck_name = random.choice(self.selected_decks)
+            try:
+                card = self.collection.get_random_card(deck_name)
+                self.current_card = card
+                self.label.setText(card[0])
+                self.label.adjustSize()
+            except ValueError as e:
+                self.label.setText(str(e))
+        else:
+            self.label.setText("No decks selected")
 
     def update_timer_icon(self):
         if self.timer_running:
@@ -316,7 +344,7 @@ class MainWindow(QWidget):
             )
 
     def open_settings(self):
-        dialog = SettingsDialog(self.update_interval, self.window_opacity, self)
+        dialog = SettingsDialog(self.update_interval, self.window_opacity, self.collection, self)
         if dialog.exec():
             self.update_interval, self.window_opacity, self.bg_color, self.text_color = dialog.get_settings()
             self.timer.setInterval(self.update_interval * 1000)  # Update timer interval
@@ -373,21 +401,38 @@ class MainWindow(QWidget):
     def mouseReleaseEvent(self, event: QMouseEvent):
         if event.button() == Qt.LeftButton:
             if not self.resizing:
-                # Check if click is within label bounds
                 if self.label.geometry().contains(event.pos()):
-                    # Toggle timer on left button release
-                    if self.timer_running:
-                        self.timer.stop()
-                    else:
+                    # Если таймер был остановлен (например, после правого клика)
+                    if not self.timer_running:
+                        # Возобновляем таймер
                         self.timer.start(self.update_interval * 1000)
-                    self.timer_running = not self.timer_running
-                    self.update_timer_icon()
+                        self.timer_running = True
+                        self.update_timer_icon()
+                        # Переходим к следующей карточке
+                        self.update_text()
+                    else:
+                        # Останавливаем таймер
+                        self.timer.stop()
+                        self.timer_running = False
+                        self.update_timer_icon()
         elif event.button() == Qt.RightButton:
-            # Stop timer and update text on right button release
-            self.timer.stop()
-            self.timer_running = False
-            self.update_timer_icon()
-            self.update_text_right_click()
+            if self.current_card:
+                # Ставим таймер на паузу, если он запущен
+                if self.timer_running:
+                    self.timer.stop()
+                    self.timer_running = False
+                    self.update_timer_icon()
+                current_text = self.label.text()
+                if current_text == self.current_card[0]:
+                    # Отображаем вторую сторону
+                    self.label.setText(self.current_card[1])
+                elif len(self.current_card) > 2 and current_text == self.current_card[1]:
+                    # Отображаем комментарий, если он есть
+                    self.label.setText(self.current_card[2])
+                else:
+                    # Возвращаемся к первой стороне
+                    self.label.setText(self.current_card[0])
+                self.label.adjustSize()
         self.resizing = False
 
     def is_in_resize_zone(self, pos):

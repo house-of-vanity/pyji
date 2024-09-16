@@ -24,10 +24,17 @@ def read_config(config_path):
     if os.path.exists(config_path):
         config.read(config_path)
     else:
-        config['UI'] = {}
+        config['UI'] = {
+            'pin': 'False',
+            'update_interval': '1',
+            'window_opacity': '1.0',
+            'bg_color': 'darkCyan',
+            'text_color': 'black'
+        }
         with open(config_path, 'w') as configfile:
             config.write(configfile)
     return config
+
 
 def write_config(config):
     config_path = get_config_path()
