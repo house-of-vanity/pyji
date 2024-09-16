@@ -96,6 +96,9 @@ jobs:
           name: ${{ env.BINARY_NAME }}_${{ matrix.platform_name }}
           path: .
 
+      - name: Test
+        run: ls -l ; ls -l ${{ env.BINARY_NAME }}
+
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
