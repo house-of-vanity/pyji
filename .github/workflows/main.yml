@@ -35,9 +35,15 @@ jobs:
           pyinstaller --noconsole --onefile main.py
 
       - name: Upload artifact
+        if: startsWith(matrix.os, 'ubuntu')
         uses: actions/upload-artifact@v3
         with:
-          name: binary-${{ matrix.os }}
-          path: |
-            dist/main  # на Linux
-            dist/main.exe  # на Windows
+          name: binary-ubuntu
+          path: dist/main
+      
+      - name: Upload artifact
+        if: startsWith(matrix.os, 'windows')
+        uses: actions/upload-artifact@v3
+        with:
+          name: binary-windows
+          path: dist/main.exe
