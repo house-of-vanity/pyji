@@ -28,7 +28,7 @@ jobs:
       - name: Set up Python ${{ matrix.os }}
         uses: actions/setup-python@v2
         with:
-          python-version: '3.12'
+          python-version: '3.9'
 
       - name: Install dependencies
         run: |
@@ -37,6 +37,8 @@ jobs:
 
       - name: Build binary with PyInstaller
         run: |
+          ls -la
+          ls -la icons/
           pyinstaller --noconsole --add-data "icons:icons" --onefile main.py
 
       - name: Upload artifact (Linux)
