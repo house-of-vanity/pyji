@@ -1,6 +1,10 @@
 # PyJi
 
 **PyJi** is a flexible flashcard application to help you learn and memorize any subject. It is floating desktop app above all other windows, displaying random questions from a deck. The main purpose of the application is to continuously show questions, kanji, or any content, so that the user passively memorizes them.
+<p align="center">
+  <img src="[images/logo.png](https://github.com/user-attachments/assets/cb673e7e-cbc8-40aa-9d0c-61adb298c4fc)" alt="PyJi Logo">
+</p>
+
 ## Features
 
 - **Cross-Platform**: Runs on Windows, macOS, and Linux.
