@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 from PySide6.QtCore import QTimer, QTime, Qt, QPoint
-from PySide6.QtGui import QIcon, QMouseEvent, QPixmap, QColor
+from PySide6.QtGui import QIcon, QMouseEvent, QPixmap, QColor, QFontMetrics
 
 # Locals
 import config as conf
@@ -200,7 +200,7 @@ class MainWindow(QWidget):
         self.collection = deck.Collection(directory_path=f"{conf.get_config_path(config=False)}/decks/")
         self.current_card = None
         self.config = config
-        self.update_interval = config.getint("UI", "update_interval", fallback=1)
+        self.update_interval = config.getint("UI", "update_interval", fallback=10)
         self.window_opacity = config.getfloat("UI", "window_opacity", fallback=1.0)
         self.bg_color = QColor(config.get("UI", "bg_color", fallback="darkCyan"))
         self.text_color = QColor(config.get("UI", "text_color", fallback="black"))
@@ -325,8 +325,9 @@ class MainWindow(QWidget):
             deck_name = random.choice(self.selected_decks)
             try:
                 card = self.collection.get_random_card(deck_name)
-                self.current_card = card
-                self.label.setText(card[0])
+                self.current_card = card  # Сохраняем текущую карточку
+                self.label.setText(card[0])  # Отображаем первую сторону карточки (вопрос)
+                self.update_font_size(is_question=True)  # Устанавливаем большой шрифт для вопроса
                 self.label.adjustSize()
             except ValueError as e:
                 self.label.setText(str(e))
@@ -356,16 +357,24 @@ class MainWindow(QWidget):
             self.config["UI"]["text_color"] = self.text_color.name()
             conf.write_config(self.config)
 
-    def update_font_size(self):
-        # Calculate font size based on window size
-        font_size = min(self.width(), self.height()) // 10
+    def update_font_size(self, is_question=True):
+        # Рассчитываем базовый размер шрифта в зависимости от размера окна
+        base_font_size = min(self.width(), self.height()) // 5
         font = self.label.font()
-        font.setPointSize(font_size)
+        if is_question:
+            font.setPointSize(base_font_size)  # Большой шрифт для вопроса
+        else:
+            font.setPointSize(base_font_size * 0.5)  # Меньший шрифт для ответа (70% от базового)
         self.label.setFont(font)
 
     def resizeEvent(self, event):
-        # Update font size on window resize
-        self.update_font_size()
+        # Проверяем, какая сторона карточки отображается
+        if self.current_card and self.label.text() == self.current_card[0]:
+            # Если отображается вопрос
+            self.update_font_size(is_question=True)
+        else:
+            # Если отображается ответ или другой текст
+            self.update_font_size(is_question=False)
         super().resizeEvent(event)
 
     def toggle_always_on_top(self):
@@ -402,37 +411,37 @@ class MainWindow(QWidget):
         if event.button() == Qt.LeftButton:
             if not self.resizing:
                 if self.label.geometry().contains(event.pos()):
-                    # Если таймер был остановлен (например, после правого клика)
                     if not self.timer_running:
-                        # Возобновляем таймер
                         self.timer.start(self.update_interval * 1000)
                         self.timer_running = True
                         self.update_timer_icon()
-                        # Переходим к следующей карточке
                         self.update_text()
                     else:
-                        # Останавливаем таймер
                         self.timer.stop()
                         self.timer_running = False
                         self.update_timer_icon()
         elif event.button() == Qt.RightButton:
             if self.current_card:
-                # Ставим таймер на паузу, если он запущен
+                # Останавливаем таймер, если он запущен
                 if self.timer_running:
                     self.timer.stop()
                     self.timer_running = False
                     self.update_timer_icon()
                 current_text = self.label.text()
+                # Проверяем, отображается ли первая сторона
                 if current_text == self.current_card[0]:
-                    # Отображаем вторую сторону
-                    self.label.setText(self.current_card[1])
-                elif len(self.current_card) > 2 and current_text == self.current_card[1]:
-                    # Отображаем комментарий, если он есть
-                    self.label.setText(self.current_card[2])
+                    # Объединяем обратную сторону и комментарий
+                    combined_text = self.current_card[1]
+                    if len(self.current_card) > 2:
+                        combined_text += '\n\n' + self.current_card[2]
+                    self.label.setText(combined_text)
+                    self.update_font_size(is_question=False)  # Устанавливаем меньший шрифт для ответа
                 else:
                     # Возвращаемся к первой стороне
                     self.label.setText(self.current_card[0])
+                    self.update_font_size(is_question=True)  # Устанавливаем большой шрифт для вопроса
                 self.label.adjustSize()
+
         self.resizing = False
 
     def is_in_resize_zone(self, pos):

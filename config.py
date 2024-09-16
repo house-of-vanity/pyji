@@ -26,7 +26,7 @@ def read_config(config_path):
     else:
         config['UI'] = {
             'pin': 'False',
-            'update_interval': '1',
+            'update_interval': '10',
             'window_opacity': '1.0',
             'bg_color': 'darkCyan',
             'text_color': 'black'
