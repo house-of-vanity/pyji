@@ -56,26 +56,17 @@ class DeckSelectionDialog(QDialog):
 
         # Add example items to the table
         config = conf.read_config(conf.get_config_path())
-        selected_decks = config.get('UI', 'selected_decks', fallback='').split(',')
+        self.selected_decks = config.get('UI', 'selected_decks', fallback='').split(',')
 
-        self.populate_table(selected_decks)
+        self.populate_table()
 
         self.layout.addWidget(self.table)
 
-        # Button to add file from the file system
-        self.add_file_button = QPushButton("Add File", self)
-        self.add_file_button.clicked.connect(self.add_file)
+        # Button to access online repository
+        self.online_repo_button = QPushButton("Online Repository", self)
+        self.online_repo_button.clicked.connect(self.open_online_repository)
 
-        # Button to add URL
-        self.add_url_button = QPushButton("Add URL", self)
-        self.add_url_button.clicked.connect(self.add_url)
-
-        # Layout for add buttons
-        add_button_layout = QHBoxLayout()
-        add_button_layout.addWidget(self.add_file_button)
-        add_button_layout.addWidget(self.add_url_button)
-
-        self.layout.addLayout(add_button_layout)
+        self.layout.addWidget(self.online_repo_button)
 
         # OK and Cancel buttons
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
@@ -83,80 +74,101 @@ class DeckSelectionDialog(QDialog):
         self.button_box.rejected.connect(self.reject)
         self.layout.addWidget(self.button_box)
 
-    def populate_table(self, selected_decks):
+    def populate_table(self):
         deck_names = self.collection.get_decks()
         self.table.setRowCount(len(deck_names))
         for row, deck_name in enumerate(deck_names):
             checkbox = QCheckBox()
-            if deck_name in selected_decks:
+            if deck_name in self.selected_decks:
                 checkbox.setChecked(True)
             self.table.setCellWidget(row, 0, checkbox)
             self.table.setItem(row, 1, QTableWidgetItem(deck_name))
 
-
     def get_selected_items(self):
-        selected_items = []
+        self.selected_decks = []
         for row in range(self.table.rowCount()):
             checkbox = self.table.cellWidget(row, 0)
             if checkbox.isChecked():
                 item_name = self.table.item(row, 1).text()
-                selected_items.append(item_name)
-        return selected_items
+                self.selected_decks.append(item_name)
+        return self.selected_decks
 
-    def add_file(self):
-        file_dialog = QFileDialog(self)
-        file_path, _ = file_dialog.getOpenFileName(self, "Select File")
-        if file_path:
-            self.add_item(file_path)
+    def open_online_repository(self):
+        try:
+            repo_url = "https://raw.githubusercontent.com/house-of-vanity/pyji/master/decs/repo.yaml"
+            response = requests.get(repo_url)
+            response.raise_for_status()
+            data = yaml.safe_load(response.text)
+            deck_names = data.get('decks', [])
+        except Exception as e:
+            self.show_error_message(f"Failed to fetch repository: {e}")
+            return
 
-    def add_url(self):
-        url, ok = QInputDialog.getText(self, "Add URL", "Enter URL:")
-        if ok and url:
-            if not url.lower().endswith('.yaml'):
-                self.show_error_message("URL must point to a YAML file.")
-                return
+        dialog = self.OnlineRepositoryDialog(deck_names, self)
+        if dialog.exec():
+            selected_decks = dialog.selected_decks
+            if selected_decks:
+                self.download_and_add_decks(selected_decks)
 
+    def download_and_add_decks(self, selected_decks):
+        decks_path = f"{conf.get_config_path(config=False)}/decks/"
+        os.makedirs(decks_path, exist_ok=True)  # Ensure the directory exists
+        for deck_name in selected_decks:
+            deck_url = f"https://raw.githubusercontent.com/house-of-vanity/pyji/master/decs/{deck_name}.yaml"
             try:
-                # Send a request to download the file
-                response = requests.get(url)
-                response.raise_for_status()  # Raise an error for bad response
-
-                # Get the path to the decks folder
-                decks_path = f"{conf.get_config_path(config=False)}/decks/"
-                os.makedirs(decks_path, exist_ok=True)  # Ensure the directory exists
-
-                # Extract file name from the URL
-                file_name = os.path.basename(url)
-                file_path = os.path.join(decks_path, file_name)
-
-                # Write the downloaded file to the specified path
+                response = requests.get(deck_url)
+                response.raise_for_status()
+                file_path = os.path.join(decks_path, f"{deck_name}.yaml")
                 with open(file_path, 'wb') as f:
                     f.write(response.content)
-
                 # Load the new deck into the collection
                 self.collection.add_new_deck(file_path)
-
-                # Reload the table with the new deck
-                data = yaml.safe_load(open(file_path, 'r', encoding='utf-8'))
-                if 'decks' in data:
-                    for deck in data['decks']:
-                        self.add_item(deck['name'])
-
-            except requests.exceptions.RequestException as e:
-                self.show_error_message(f"Failed to download the file: {e}")
-            except yaml.YAMLError as e:
-                self.show_error_message(f"Failed to parse the YAML file: {e}")
-
-    def add_item(self, item):
-        row_count = self.table.rowCount()
-        self.table.insertRow(row_count)
-
-        checkbox = QCheckBox()
-        self.table.setCellWidget(row_count, 0, checkbox)
-        self.table.setItem(row_count, 1, QTableWidgetItem(item))
+            except Exception as e:
+                self.show_error_message(f"Failed to download deck {deck_name}: {e}")
+        # After downloading and adding decks, reload the table
+        self.populate_table()
 
     def show_error_message(self, message):
         QMessageBox.critical(self, "Error", message)
+
+    class OnlineRepositoryDialog(QDialog):
+        def __init__(self, deck_names, parent=None):
+            super().__init__(parent)
+            self.setWindowTitle("Online Repository")
+            self.deck_names = deck_names
+            self.selected_decks = []
+            self.layout = QVBoxLayout(self)
+
+            self.table = QTableWidget(self)
+            self.table.setColumnCount(2)
+            self.table.setHorizontalHeaderLabels(["Select", "Deck Name"])
+            self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            self.table.setRowCount(len(deck_names))
+            for row, deck_name in enumerate(deck_names):
+                checkbox = QCheckBox()
+                self.table.setCellWidget(row, 0, checkbox)
+                self.table.setItem(row, 1, QTableWidgetItem(deck_name))
+            self.layout.addWidget(self.table)
+
+            # Download button
+            self.download_button = QPushButton("Download Selected Decks", self)
+            self.download_button.clicked.connect(self.download_selected_decks)
+            self.layout.addWidget(self.download_button)
+
+            # Cancel button
+            self.cancel_button = QPushButton("Cancel", self)
+            self.cancel_button.clicked.connect(self.reject)
+            self.layout.addWidget(self.cancel_button)
+
+        def download_selected_decks(self):
+            # Collect selected decks
+            self.selected_decks = []
+            for row in range(self.table.rowCount()):
+                checkbox = self.table.cellWidget(row, 0)
+                if checkbox.isChecked():
+                    deck_name = self.table.item(row, 1).text()
+                    self.selected_decks.append(deck_name)
+            self.accept()
 
 
 class SettingsDialog(QDialog):
@@ -248,7 +260,6 @@ class SettingsDialog(QDialog):
             self.main_bg_color,
             self.main_text_color,
         )
-
 
 class MainWindow(QWidget):
     def __init__(self, config):
