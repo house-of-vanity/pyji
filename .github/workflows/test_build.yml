@@ -19,9 +19,9 @@ jobs:
           - os: windows-latest
             platform_name: windows-amd64
           - os: macos-latest
-            platform_name: macos-m1
+            platform_name: macos-arm64
           - os: macos-13
-            platform_name: macos-intel
+            platform_name: macos-amd64
     permissions:
       contents: write
     steps:
@@ -42,14 +42,13 @@ jobs:
           ls
           ls icons/
           pyinstaller --noconsole --add-data "icons:icons" --onefile main.py
-          ls dist/
 
-      # - name: Upload artifact (Linux)
-      #   if: matrix.os == 'ubuntu-latest'
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: ${{ env.BINARY_NAME }}_linux-amd64
-      #     path: dist/main
+      - name: Upload artifact (Linux)
+        # if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}_${{ matrix.platform_name }}
+          path: dist/main.*
 
       # - name: Upload artifact (Windows)
       #   if: matrix.os == 'windows-latest'
