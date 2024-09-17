@@ -72,3 +72,22 @@ class Collection:
         Get a list of all available deck names.
         """
         return list(self.decks.keys())
+
+    def add_new_deck(self, file_path):
+        """
+        Load a new deck from a YAML file and add it to the collection.
+        """
+        try:
+            data = read_yaml(file_path)
+            if is_valid_deck_data(data):
+                for deck in data['decks']:
+                    deck_name = deck['name']
+                    if deck_name not in self.decks:
+                        self.decks[deck_name] = []
+                    # Append cards to the existing deck
+                    self.decks[deck_name].extend(deck['cards'])
+                print(f"Deck '{deck_name}' successfully added.")
+            else:
+                print(f"Invalid deck format in file: {file_path}")
+        except Exception as e:
+            print(f"Error processing file {file_path}: {e}")

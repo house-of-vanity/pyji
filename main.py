@@ -4,6 +4,7 @@ import sys
 import config as conf
 import ui
 
+
 if __name__ == '__main__':
     config = conf.init()
     app = ui.QApplication(sys.argv)

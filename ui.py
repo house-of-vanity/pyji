@@ -23,6 +23,8 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QMessageBox,
 )
+import requests
+import yaml
 from PySide6.QtCore import QTimer, QTime, Qt, QPoint
 from PySide6.QtGui import QIcon, QMouseEvent, QPixmap, QColor, QFontMetrics
 
@@ -110,7 +112,40 @@ class DeckSelectionDialog(QDialog):
     def add_url(self):
         url, ok = QInputDialog.getText(self, "Add URL", "Enter URL:")
         if ok and url:
-            self.add_item(url)
+            if not url.lower().endswith('.yaml'):
+                self.show_error_message("URL must point to a YAML file.")
+                return
+
+            try:
+                # Send a request to download the file
+                response = requests.get(url)
+                response.raise_for_status()  # Raise an error for bad response
+
+                # Get the path to the decks folder
+                decks_path = f"{conf.get_config_path(config=False)}/decks/"
+                os.makedirs(decks_path, exist_ok=True)  # Ensure the directory exists
+
+                # Extract file name from the URL
+                file_name = os.path.basename(url)
+                file_path = os.path.join(decks_path, file_name)
+
+                # Write the downloaded file to the specified path
+                with open(file_path, 'wb') as f:
+                    f.write(response.content)
+
+                # Load the new deck into the collection
+                self.collection.add_new_deck(file_path)
+
+                # Reload the table with the new deck
+                data = yaml.safe_load(open(file_path, 'r', encoding='utf-8'))
+                if 'decks' in data:
+                    for deck in data['decks']:
+                        self.add_item(deck['name'])
+
+            except requests.exceptions.RequestException as e:
+                self.show_error_message(f"Failed to download the file: {e}")
+            except yaml.YAMLError as e:
+                self.show_error_message(f"Failed to parse the YAML file: {e}")
 
     def add_item(self, item):
         row_count = self.table.rowCount()
