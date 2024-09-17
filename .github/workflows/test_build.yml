@@ -39,16 +39,15 @@ jobs:
 
       - name: Build binary with PyInstaller
         run: |
-          ls
-          ls icons/
           pyinstaller --noconsole --add-data "icons:icons" --onefile main.py
+          ls dist/
 
       - name: Upload artifact (Linux)
         # if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}_${{ matrix.platform_name }}
-          path: dist/main.*
+          path: dist/main*
 
       # - name: Upload artifact (Windows)
       #   if: matrix.os == 'windows-latest'
