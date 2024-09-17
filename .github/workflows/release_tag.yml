@@ -14,12 +14,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest, macos-13]
         include:
           - os: ubuntu-latest
             platform_name: linux-amd64
           - os: windows-latest
             platform_name: windows-amd64
+          - os: macos-latest
+            platform_name: macos-m1
+          - os: macos-13
+            platform_name: macos-intel
     permissions:
       contents: write
     steps:
@@ -83,12 +87,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest, macos-13]
         include:
           - os: ubuntu-latest
             platform_name: linux-amd64
           - os: windows-latest
             platform_name: windows-amd64
+          - os: macos-latest
+            platform_name: macos-m1
+          - os: macos-13
+            platform_name: macos-intel
     steps:
       - name: Download ${{ matrix.platform_name }} artifact
         uses: actions/download-artifact@v4
