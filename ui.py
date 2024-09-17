@@ -199,6 +199,20 @@ class SettingsDialog(QDialog):
         self.item_selection_button.clicked.connect(self.open_item_selection)
         self.layout.addRow(self.item_selection_button)
 
+        # License and author information (with link)
+        self.info_label = QLabel(self)
+        self.info_label.setTextFormat(Qt.RichText)
+        self.info_label.setOpenExternalLinks(True)  # Allows opening the link in the default browser
+        self.info_label.setText(
+            """
+            <p><b>PyJi flashcard widget</b></p>
+            <p><b>Author:</b> AB oss@hexor.cy</p>
+            <p><b>License:</b> WTFPL</p>
+            <p><a href="https://github.com/house-of-vanity/pyji">GitHub</a></p>
+            """
+        )
+        self.layout.addRow(self.info_label)
+
         # OK and Cancel buttons
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
         self.button_box.accepted.connect(self.accept)
@@ -244,8 +258,8 @@ class MainWindow(QWidget):
         self.config = config
         self.update_interval = config.getint("UI", "update_interval", fallback=10)
         self.window_opacity = config.getfloat("UI", "window_opacity", fallback=1.0)
-        self.bg_color = QColor(config.get("UI", "bg_color", fallback="darkCyan"))
-        self.text_color = QColor(config.get("UI", "text_color", fallback="black"))
+        self.bg_color = QColor(config.get("UI", "bg_color", fallback="#ff55ff"))
+        self.text_color = QColor(config.get("UI", "text_color", fallback="#000000"))
         selected_decks = self.config.get('UI', 'selected_decks', fallback='')
         if selected_decks:
             self.selected_decks = selected_decks.split(',')
@@ -257,6 +271,21 @@ class MainWindow(QWidget):
         self.always_on_top = False  # Track the always on top state
         self.timer_running = True  # Track timer state
         self.initUI()
+
+    def apply_styles(self):
+        """
+        Apply styles to the main window and label based on the current background and text colors.
+        """
+        self.setStyleSheet(
+            f"""
+            MainWindow {{
+                background-color: {self.bg_color.name()};
+            }}
+            QLabel#MainText {{
+                color: {self.text_color.name()};
+            }}
+            """
+        )
 
     def initUI(self):
         self.resize(200, 200)
@@ -392,6 +421,7 @@ class MainWindow(QWidget):
             self.update_interval, self.window_opacity, self.bg_color, self.text_color = dialog.get_settings()
             self.timer.setInterval(self.update_interval * 1000)  # Update timer interval
             self.setWindowOpacity(self.window_opacity)  # Update window opacity
+            self.apply_styles()
             # Apply styles specific to MainWindow only
             self.config["UI"]["update_interval"] = str(self.update_interval)
             self.config["UI"]["window_opacity"] = str(self.window_opacity)
