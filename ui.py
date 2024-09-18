@@ -441,12 +441,12 @@ class MainWindow(QWidget):
             conf.write_config(self.config)
 
     def update_font_size(self, is_question=True):
-        base_font_size = min(self.width(), self.height()) // 5
+        base_font_size = min(self.width(), self.height()) // 3
         font = self.label.font()
         if is_question:
             font.setPointSize(base_font_size)  # Set huge font for question
         else:
-            font.setPointSize(base_font_size * 0.5)  # Set smaller font for answer
+            font.setPointSize(base_font_size * 0.3)  # Set smaller font for answer
         self.label.setFont(font)
 
     def resizeEvent(self, event):
