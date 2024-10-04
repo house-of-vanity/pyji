@@ -26,7 +26,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python ${{ matrix.os }}
         uses: actions/setup-python@v5
         with:
@@ -42,12 +42,35 @@ jobs:
           pyinstaller --noconsole --add-data "icons:icons" --onefile main.py
           ls dist/
 
+      - name: Generate run script (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cat > dist/run.sh << 'EOF'
+          #!/bin/sh -
+
+          BIN_DIR=$(dirname $0)
+          xattr -d com.apple.quarantine "${BIN_DIR}/main"
+          chmod +x "${BIN_DIR}/main"
+          "${BIN_DIR}/main"
+          EOF
+          chmod +x dist/run.sh
+          cd dist
+          tar -cvf pyji.tar run.sh main
+
+      - name: Upload artifact (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}_${{ matrix.platform_name }}
+          path: dist/pyji.tar
+
       - name: Upload artifact (Linux)
-        # if: matrix.os == 'ubuntu-latest'
+        if: runner.os != 'macOS'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}_${{ matrix.platform_name }}
           path: dist/main*
+          include-hidden-files: true
 
       # - name: Upload artifact (Windows)
       #   if: matrix.os == 'windows-latest'
