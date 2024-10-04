@@ -53,6 +53,7 @@ jobs:
           chmod +x "${BIN_DIR}/main"
           "${BIN_DIR}/main"
           EOF
+          chmod +x dist/run.sh
 
       - name: Upload artifact (macOS)
         if: runner.os == 'macOS'
