@@ -45,7 +45,7 @@ jobs:
       - name: Generate run script (macOS)
         if: runner.os == 'macOS'
         run: |
-          cat <<EOF > dist/run.sh
+          cat <EOF > dist/run.sh
           #!/bin/sh -
 
           BIN_DIR=$(dirname $0)
