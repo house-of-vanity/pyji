@@ -42,8 +42,17 @@ jobs:
           pyinstaller --noconsole --add-data "icons:icons" --onefile main.py
           ls dist/
 
+      - name: Upload artifact (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}_${{ matrix.platform_name }}
+          path: dist/main*
+          include-hidden-files: true
+
+
       - name: Upload artifact (Linux)
-        # if: matrix.os == 'ubuntu-latest'
+        if: runner.os != 'macOS'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}_${{ matrix.platform_name }}
