@@ -54,17 +54,15 @@ jobs:
           "${BIN_DIR}/main"
           EOF
           chmod +x dist/run.sh
+          cd dist
+          tar -cvf pyji.tar run.sh main
 
       - name: Upload artifact (macOS)
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}_${{ matrix.platform_name }}
-          path: |
-            dist/main
-            dist/run.sh
-          include-hidden-files: true
-
+          path: dist/pyji.tar
 
       - name: Upload artifact (Linux)
         if: runner.os != 'macOS'
